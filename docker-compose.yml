@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:12.19-alpine
+    command:
+      - "postgres"
+      - "-c"
+      - "fsync=off"
+      - "-c"
+      - "synchronous_commit=off"
+      - "-c"
+      - "full_page_writes=off"
+      - "-c"
+      - "max_connections=100"
+    environment:
+      POSTGRES_DB: "autopsy"
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "admin"
+      POSTGRES_PORT: "54322"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./docker_postgres/postgresScript.sql:/docker-entrypoint-initdb.d/postgresScript.sql
+      - postgres-data:/var/lib/postgresql/data
+
+  activemq:
+    build:
+      context: docker_activemq
+      dockerfile: Dockerfile
+    networks:
+      - default
+    ports:
+      - "61616:61616"
+      - "8161:8161"
+    volumes: 
+      - activemq-config:/opt/activemq/conf
+      - activemq-data:/opt/activemq/data
+
+
+  solr:
+    ports:
+      - "8983:8983"
+      - "8079:8079"
+    environment:
+      SOLR_HOST: "192.168.65.155"
+      ZK_HOST: "192.168.65.155:9983"
+    volumes:
+      - solr-data:/var/solr
+    build:
+      context: docker_solr
+      dockerfile: Dockerfile
+
+  zookeeper:
+    image: zookeeper:3.5.7
+    environment:
+      ZOO_ADMINSERVER_ENABLED: true 
+      ZOO_STANDALONE_ENABLED: true
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    ports:
+      - "9983:2181"
+      - "8080:8080"
+    volumes:
+      - zk-data:/data
+      - zk-logs:/datalog
+
+  samba:
+    ports:
+      - "137:137/udp"
+      - "138:138/udp"
+      - "139:139/tcp"
+      - "445:445"
+    volumes:
+      - samba-data:/tmp/sambashare
+    build:
+      context: docker_smb
+      dockerfile: Dockerfile
+
+volumes:
+  zk-data:
+  zk-logs:
+  samba-data:
+  solr-data:
+  activemq-config:
+  activemq-data:
+  postgres-data:
